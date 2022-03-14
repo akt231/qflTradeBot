@@ -4,6 +4,7 @@ import numpy as np
 import os
 
 from datetime import datetime
+from datetime import date
 from dateutil.relativedelta import relativedelta
 
 import wget
@@ -69,9 +70,8 @@ def get_filecontent_lst(symbolfile):
         lst_main.extend(lst)
     return lst_main
 
-def chk_symbolpair_file(all_basequote_lst):
+def chk_symbolpair_file(symbolfile, all_basequote_lst):
     lines = []
-    symbolfile = "./inputs/symbols_inputlst.txt"
     symbol_lst = get_filecontent_lst(symbolfile)
     print(f'nos of symbols from file is',len(symbol_lst))
     
@@ -93,14 +93,23 @@ def get_date_from_months(date_input, months_val):
     new_date = date_input + relativedelta(months=months_val)
     return new_date
 
+def get_historical_enddate_dt(end_date_dt):
+    today_dt = datetime.today()
+    today_strf = datetime.today().strftime("%Y-%m-%d")
+    enddate = end_date_dt.strftime("%Y-%m-%d")
+    
+    if enddate == today_strf:
+        end_date_dt = end_date_dt + relativedelta(days=-1)
+    return end_date_dt
+
+  
+
 def get_kline_dict(default_symbol_lst, start_date_dt, end_date_dt, default_data_interval_lst, default_data_kline_type):
     startdate = start_date_dt.strftime("%Y-%m-%d")    #'2021-01-21'
     enddate   = end_date_dt.strftime("%Y-%m-%d")      #'2021-10-21'
     
-    today_strf = datetime.today().strftime("%Y-%m-%d")
-    if enddate == today_strf:
-        end_date_dt = end_date_dt + relativedelta(days=-1)
-        enddate   = end_date_dt.strftime("%Y-%m-%d") 
+    end_date_dt = get_historical_enddate_dt(end_date_dt)
+
     yrmnth_dict = get_time_range_dict(startdate, enddate)
     
     
@@ -578,6 +587,45 @@ def get_sliced_startdate_dt(datapts_btw_start_end, datapts_shift, datapts_shift_
                 date_to = end_date_dt - relativedelta(months=datapts_dataval_end)
     return  [date_from, date_to]
 
+def getsliced_date_lsts(intrvl_lst, datapts_btw_start_end, datapts_shift, datapts_shift_factor):
+    date_from_lst = []
+    date_to_lst = []
+    
+    #today_date_input = datetime.date.today()
+    today_date_input = date.today()
+    end_date_dt = today_date_input
+    end_date_dt = get_historical_enddate_dt(end_date_dt)
+    
+
+
+    for interval in intrvl_lst:
+        date_ = get_sliced_startdate_dt(datapts_btw_start_end, datapts_shift, datapts_shift_factor, interval, end_date_dt)
+
+        date_from = date_[0]
+        date_to = date_[1]
+
+        date_from_lst.append(date_from)
+        date_to_lst.append(date_to)
+    return date_from_lst, date_to_lst
+
+def get_sliced_df(symbols_lst, intrvl_lst, date_from_lst, date_to_lst, df_lst, df_ochlv_lst):
+    df_full_slicedate_lst = []
+    df_ochlv_slicedate_lst = []
+    all_lst = list(zip(symbols_lst, intrvl_lst, date_from_lst, date_to_lst, df_lst, df_ochlv_lst ))
+    for cnt, (symbol, intrvl, date_from, date_to, df_full, df_ochlv) in enumerate(all_lst):
+        df_full_slicedate = get_historical_data(df_full, str(date_from), str(date_to))
+        df_ochlv_slicedate = get_historical_data(df_ochlv, str(date_from), str(date_to))
+        
+        df_full_slicedate_lst.append(df_full_slicedate)
+        df_ochlv_slicedate_lst.append(df_ochlv_slicedate)
+    
+    #quick check of df dates
+    
+    slicedate_lst = list(zip(symbols_lst, intrvl_lst, df_full_slicedate_lst, df_ochlv_slicedate_lst, df_lst, df_ochlv_lst))   
+    for cnt, (symbol, intrvl, df_full_slicedate, df_ochlv_slicedate, df_full, df_ochlv) in enumerate(slicedate_lst):
+        print(f'count: {cnt}|symbol: {symbol}|interval: {intrvl}|rows orig df sliced by date:{len(df_full_slicedate.index)} of {len(df_full.index)}|rows ochlv df sliced by date:{len(df_ochlv_slicedate.index)} of {len(df_ochlv.index)}')       
+    
+    return slicedate_lst
             
                 
     
