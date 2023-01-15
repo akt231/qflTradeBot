@@ -9,38 +9,33 @@ Created on Fri Jan  6 18:47:22 2023
 import pandas as pd
 import yfinance as yf
 import pandas as pd
-from time import time, sleep
-from finvizfinance.quote import finvizfinance
-
 import numpy as np
+from time import time, sleep
 import datetime
 from tqdm import tqdm
 import math
+from finvizfinance.quote import finvizfinance
 import telepot
 import re
-
-
-#Tickers1=["xela","nvos","otrk"]
-#Tickers=["pik","brezr","mtc","vs","snmp","baos","kspn","hpco","mtp","smit","sprc","acon","jcse","jxjt","vine","aimd","op","nbrv","snoa",
-#         "cyan","nerv","otrk"]
-#["aim","ibio","zyne","mbio","lci","alzn","cycn","sesn","akba","tnxp","blrx","acst","vrpx","adxn","fbio","cdtx","cntb","aqst",
-#         "abvc","stsa","nhwk","cyan","fwbi","otlk","onct",""]
-#Tickers1=["jzxn","brezr","snmp","gfai","rdhl","syta","akan","krbp"]
-#Tickers1=["nept","cyrn","vive","aimd","gvp","jcse","alr","pte","qncx","mdrr","nrbo","bkyi","blrx","acst","rvyl","vcnx","gray","lfly","ssy",
-# "sbig","bttr","lci","rvyl","vcnx","gray","lfly","ssy","acon","tovx","ivda","moxc","imbi","zkin","ufab","ocg","ncty","ear","reli",
-# "wavd","bsgm","cnet","ibio","lixt","tomz","msn","mobq","apm","itp"]
-
-Tickers1=['amzn', 'spy', 'bac', ]
+Tickers1=["xela","nvos","otrk"]
+Tickers=["pik","brezr","mtc","vs","snmp","baos","kspn","hpco","mtp","smit","sprc","acon","jcse","jxjt","vine","aimd","op","nbrv","snoa",
+         "cyan","nerv","otrk"]
+["aim","ibio","zyne","mbio","lci","alzn","cycn","sesn","akba","tnxp","blrx","acst","vrpx","adxn","fbio","cdtx","cntb","aqst",
+         "abvc","stsa","nhwk","cyan","fwbi","otlk","onct",""]
+Tickers1=["jzxn","brezr","snmp","gfai","rdhl","syta","akan","krbp"]
+Tickers1=["nept","cyrn","vive","aimd","gvp","jcse","alr","pte","qncx","mdrr","nrbo","bkyi","blrx","acst","rvyl","vcnx","gray","lfly","ssy",
+ "sbig","bttr","lci","rvyl","vcnx","gray","lfly","ssy","acon","tovx","ivda","moxc","imbi","zkin","ufab","ocg","ncty","ear","reli",
+ "wavd","bsgm","cnet","ibio","lixt","tomz","msn","mobq","apm","itp"]
 # Load the data
 tradelist=[]
 
-for ticker in Tickers1:
+for ticker in Tickers:
 
     data12 = yf.download(ticker,
                       start="2022-12-1", end="2023-1-13",
                       #period="1mo",
                       interval="1h",
-                      prepost=True)
+                      prepost=True, asynchronous=True, retry=20, status_forcelist=[404, 429, 500, 502, 503, 504])
     stock = finvizfinance(ticker)
     stock_fundament = stock.ticker_fundament()
     stock_fundament.pop('EPS this Y')
