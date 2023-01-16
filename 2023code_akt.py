@@ -9,7 +9,6 @@ Created on Fri Jan  6 18:47:22 2023
 # Import necessary libraries
 import pandas as pd
 import yfinance as yf
-import pandas as pd
 from time import time, sleep
 from finvizfinance.quote import finvizfinance
 
@@ -19,6 +18,7 @@ from datetime import date
 import numpy as np
 import datetime
 from tqdm import tqdm
+
 import math
 import telepot
 import re
@@ -123,8 +123,14 @@ def getdata12(ticker):
 
 def add_calc_columns(data12):
     #calculation columns
-    data12['Min']=data12['Close'].min()
-    data12['Max']=data12['Close'].max()
+    #df['Invoice_Date'] = pd.to_datetime(df['Invoice_Date'])
+    #df.set_index('Invoice_Date', inplace=True)
+    #df.sort_index(inplace=True)
+    #df['max'] = df.groupby('ID')['Delay'].transform(lambda x: x.rolling('30D', closed='left').max())
+    period_rolling = '15D'
+    data12['Max'] = data12['Close'].transform(lambda x: x.rolling(period_rolling, closed='left').max())
+    data12['Min'] = data12['Close'].transform(lambda x: x.rolling(period_rolling, closed='left').min())
+    
     data12['track']=(data12['Close']-data12['Min'])*100/data12['Min']
     data12['t-1']=data12['track'].shift(-1)
     return data12
@@ -224,8 +230,10 @@ def batchrun_tickers(ticker_lst):
         filepath = './results/'
         filedate = date.today().strftime('%Y%m%d')
         path_and_filename = f'{filepath}{ticker}.xlsx'
+        
         with pd.ExcelWriter(path_and_filename) as writer:
-            df_data12.to_excel(writer, sheet_name = filedate )
+            df_data12.index = df_data12.index.tz_localize(None) #deals with excel lack of support for datetime with timezones
+            df_data12.to_excel(writer, sheet_name = filedate)
 
 if __name__ == "__main__":
    ticker_lst = get_ticker_lst()
