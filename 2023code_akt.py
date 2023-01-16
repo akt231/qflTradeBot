@@ -4,19 +4,6 @@ Created on Fri Jan  6 18:47:22 2023
 
 @author: afola
 #TODO LIST
-1. pls check the results for the ticdkers i tested: ["xela","nvos","otrk"]
-2. please explain what the following columns/values mean:
-    2a. data12['signal'] = 'buy stock/Call'  removed
-    2b. data12['signal'] = 'RESET'
-    2c. data12['signal'] = 'SELL Target1'
-    2d. data12['lastprice'] 
-    2e. data12['profit'] 
-
-3. please explain what the following columns/values mean:
-    please are this your target values?
-    data12["20P"] 
-    data12["30P"] 
-    data12["diff"]  
 """
 
 # Import necessary libraries
@@ -37,6 +24,9 @@ import telepot
 import re
 
 def get_ticker_lst():
+    '''
+    function that gets list of tickers
+    '''
     #Tickers1=["xela","nvos","otrk"]
     #Tickers=["pik","brezr","mtc","vs","snmp","baos","kspn","hpco","mtp","smit","sprc","acon","jcse","jxjt","vine","aimd","op","nbrv","snoa",
     #         "cyan","nerv","otrk"]
@@ -52,6 +42,9 @@ def get_ticker_lst():
 
 
 def pop_notneeded_column(stock_fundament):
+    '''
+    function to remove unneeded columns in dataframe data
+    '''
     stock_fundament.pop('EPS this Y')
     stock_fundament.pop('Beta')
     stock_fundament.pop('Book/sh')
@@ -109,6 +102,9 @@ def pop_notneeded_column(stock_fundament):
 
 
 def getdata12(ticker):
+    '''
+    function to download ticker stock data
+    '''
     # Load the data
     data12 = yf.download(ticker, 
                           start="2022-12-1", end="2023-1-13",
@@ -119,28 +115,35 @@ def getdata12(ticker):
     stock_fundament = stock.ticker_fundament()
     stock_fundament = pop_notneeded_column(stock_fundament)
     
-    #calculation columns
+    #Additional Columns added
     data12["Float"]=stock_fundament['Shs Float']
     data12['symbol']=ticker
+    
+    return data12
+
+def add_calc_columns(data12):
+    #calculation columns
     data12['Min']=data12['Close'].min()
     data12['Max']=data12['Close'].max()
     data12['track']=(data12['Close']-data12['Min'])*100/data12['Min']
     data12['t-1']=data12['track'].shift(-1)
-    
+    return data12
+
+def add_signal_column(data12):   
     #signal column values
     data12.loc[(data12['track']<10) & (data12['t-1']>10),'signal'] = 'buy stock/Call'
     data12.loc[(data12['track']==0),'signal'] = 'RESET'
     
-    data12.loc[(data12['track'] >= 15  & data12['track'] <= 20 ),'signal'] = 'T1:P:15-20'
-    data12.loc[(data12['track'] > 20   & data12['track'] <= 25 ),'signal'] = 'T2:P:20-25'
-    data12.loc[(data12['track'] > 25   & data12['track'] <= 31 ),'signal'] = 'T3:P:25-31'
-    data12.loc[(data12['track'] > 31   & data12['track'] <= 38 ),'signal'] = 'T4:P:31-38'
-    data12.loc[(data12['track'] > 38   & data12['track'] <= 45 ),'signal'] = 'T5:P:38-45'
-    data12.loc[(data12['track'] > 45   & data12['track'] <= 50 ),'signal'] = 'T6:P:45-50'
-    data12.loc[(data12['track'] > 51   & data12['track'] <= 55 ),'signal'] = 'T7:P:51-55'
-    data12.loc[(data12['track'] > 55   & data12['track'] <= 61 ),'signal'] = 'T8:P:55-61'
-    data12.loc[(data12['track'] > 61   & data12['track'] <= 65 ),'signal'] = 'T9:P:61-65'
-    data12.loc[(data12['track'] > 65 ),'signal'] = 'T10:P:65>'
+    data12.loc[( (data12['track'] >= 1  )  & (data12['track'] <= 20 )),'signal'] = 'P:T1:15-20'
+    data12.loc[( (data12['track'] > 20  )  & (data12['track'] <= 25 )),'signal'] = 'P:T2:20-25'
+    data12.loc[( (data12['track'] > 25  )  & (data12['track'] <= 31 )),'signal'] = 'P:T3:25-31'
+    data12.loc[( (data12['track'] > 31  )  & (data12['track'] <= 38 )),'signal'] = 'P:T4:31-38'
+    data12.loc[( (data12['track'] > 38  )  & (data12['track'] <= 45 )),'signal'] = 'P:T5:38-45'
+    data12.loc[( (data12['track'] > 45  )  & (data12['track'] <= 50 )),'signal'] = 'P:T6:45-50'
+    data12.loc[( (data12['track'] > 51  )  & (data12['track'] <= 55 )),'signal'] = 'P:T7:51-55'
+    data12.loc[( (data12['track'] > 55  )  & (data12['track'] <= 61 )),'signal'] = 'P:T8:55-61'
+    data12.loc[( (data12['track'] > 61  )  & (data12['track'] <= 65 )),'signal'] = 'P:T9:61-65'
+    data12.loc[(data12['track'] > 65 ),'signal'] = 'T10:P:65'
     
     data12["lastprice"] = data12["Close"][-1]
     data12["profit"] = ((data12["lastprice"]/data12["Close"])-1)*100
@@ -175,15 +178,15 @@ def backtest(data12):
     capital = 1000.0    # Set initial capital
     cash = capital      # Set initial cash
     shares = 0          # Set initial shares
-   
-    # Create empty list to store portfolio value
-    portfolio_value = []
+    portfolio = 0
     
-    # Loop through each day's data
+
     shares_lst =[]
     cash_lst = []
+    portfolio_lst = []
+    
+    # Loop through each day's data
     for index, row in data12.iterrows():
-        newrow = row
         # Buy shares
         if row['signal'] == 'RESET':
             shares += cash / row['Close']
@@ -192,27 +195,30 @@ def backtest(data12):
         elif row['signal'] == 'SELL':
             shares = 0
             cash += shares * row['High']
-
-        newrow['shares'] = shares
-        newrow['cash'] = cash
         
-        new_rows.append(newrow.values)
-        df_new = data12.append(pd.DataFrame(newrow, columns=data12.columns)).reset_index()
-
-
-        # Calculate portfolio value
-        portfolio_value.append((shares * row['High']) + cash)
-     
-    # Return portfolio value
-    return portfolio_value
+        portfolio = (shares * row['High']) + cash
+        
+        shares_lst.append(shares)
+        cash_lst.append(cash)
+        portfolio_lst.append(portfolio)
+        
+    data12['shares'] = np.array(shares_lst)
+    data12['cash'] = np.array(cash_lst)
+    data12['portfolio'] = np.array(portfolio_lst)
+    
+    # Return df
+    return data12
 
 def batchrun_tickers(ticker_lst):
     ticker_dct = {}
     for ticker in ticker_lst:
         #get ticker created data
         df_data12 = getdata12(ticker)
-        ticker_dct[ticker] = df_data12
+        df_data12 = add_calc_columns(df_data12)
+        df_data12 = add_signal_column(df_data12) 
+        
         df_data12 =backtest(df_data12)
+        ticker_dct[ticker] = df_data12
         
         #write data to excel file
         filepath = './results/'
