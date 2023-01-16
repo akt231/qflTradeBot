@@ -39,7 +39,26 @@ def get_ticker_lst():
     #Tickers1=['amzn', 'spy', 'bac', ]
     ticker_lst=["xela","nvos","otrk"]
     return ticker_lst
-
+    
+def getdata12(ticker):
+    '''
+    function to download ticker stock data
+    '''
+    # Load the data
+    data12 = yf.download(ticker, 
+                          start="2022-12-1", end="2023-1-13",
+                          #period="1mo",
+                          interval="1h",
+                          prepost=True)
+    stock = finvizfinance(ticker)
+    stock_fundament = stock.ticker_fundament()
+    stock_fundament = pop_notneeded_column(stock_fundament)
+    
+    #Additional Columns added
+    data12["Float"]=stock_fundament['Shs Float']
+    data12['symbol']=ticker
+    
+    return data12
 
 def pop_notneeded_column(stock_fundament):
     '''
@@ -98,30 +117,8 @@ def pop_notneeded_column(stock_fundament):
     stock_fundament.pop('Debt/Eq')
     stock_fundament.pop('RSI (14)')
     return stock_fundament
-    
 
-
-def getdata12(ticker):
-    '''
-    function to download ticker stock data
-    '''
-    # Load the data
-    data12 = yf.download(ticker, 
-                          start="2022-12-1", end="2023-1-13",
-                          #period="1mo",
-                          interval="1h",
-                          prepost=True)
-    stock = finvizfinance(ticker)
-    stock_fundament = stock.ticker_fundament()
-    stock_fundament = pop_notneeded_column(stock_fundament)
-    
-    #Additional Columns added
-    data12["Float"]=stock_fundament['Shs Float']
-    data12['symbol']=ticker
-    
-    return data12
-
-def add_calc_columns(data12):
+def add_pre_calc_columns(data12):
     #calculation columns
     #df['Invoice_Date'] = pd.to_datetime(df['Invoice_Date'])
     #df.set_index('Invoice_Date', inplace=True)
@@ -135,7 +132,7 @@ def add_calc_columns(data12):
     data12['t-1']=data12['track'].shift(-1)
     return data12
 
-def add_signal_column(data12):   
+def add_post_columns(data12):   
     #signal column values
     data12.loc[(data12['track']<10) & (data12['t-1']>10),'signal'] = 'buy stock/Call'
     data12.loc[(data12['track']==0),'signal'] = 'RESET'
@@ -168,15 +165,12 @@ def add_signal_column(data12):
 
     return data12
 
-#this is the point where the buy signal occurs
 def gettradelist(data12):   
     tradelist=[]
     trade=pd.DataFrame((data12.loc[lambda data12:data12['signal']=='RESET', :]))
     tradelist.append(trade)
     trade_listfinal=pd.concat(tradelist)
     return trade_listfinal
-    
-        # Define the strategy
 
 # Backtest the strategy
 def backtest(data12):
@@ -220,8 +214,8 @@ def batchrun_tickers(ticker_lst):
     for ticker in ticker_lst:
         #get ticker created data
         df_data12 = getdata12(ticker)
-        df_data12 = add_calc_columns(df_data12)
-        df_data12 = add_signal_column(df_data12) 
+        df_data12 = add_pre_calc_columns(df_data12)
+        df_data12 = add_post_columns(df_data12) 
         
         df_data12 =backtest(df_data12)
         ticker_dct[ticker] = df_data12
