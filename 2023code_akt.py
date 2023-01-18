@@ -189,12 +189,14 @@ def backtest(data12):
     for index, row in data12.iterrows():
         # Buy shares
         if row['signal'] == 'RESET':
-            shares += cash / row['Close']
-            cash = 0
+            if cash != 0:
+                shares += cash / row['Close']
+                cash = 0
         # Sell shares
         elif row['signal'] == 'SELL':
-            shares = 0
-            cash += shares * row['High']
+            if shares != 0:
+                shares = 0
+                cash += shares * row['High']
         
         portfolio = (shares * row['High']) + cash
         
