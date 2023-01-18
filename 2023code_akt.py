@@ -178,7 +178,7 @@ def backtest(data12):
     capital = 1000.0    # Set initial capital
     cash = capital      # Set initial cash
     shares = 0          # Set initial shares
-    portfolio = 0
+    portfolio_value = 0
     
 
     shares_lst =[]
@@ -187,26 +187,36 @@ def backtest(data12):
     
     # Loop through each day's data
     for index, row in data12.iterrows():
-        # Buy shares
-        if row['signal'] == 'RESET':
-            if cash != 0:
-                shares += cash / row['Close']
-                cash = 0
-        # Sell shares
-        elif row['signal'] == 'SELL':
-            if shares != 0:
-                shares = 0
-                cash += shares * row['High']
-        
-        portfolio = (shares * row['High']) + cash
-        
+        signal_value = row['signal']
+        if not pd.isnull(signal_value):
+            # Buy shares Conditions
+            if signal_value == 'RESET':
+                if cash != 0:
+                    shares = shares + ( cash / row['Close'] )
+                    cash = 0
+            # Sell shares Conditions
+            elif 'P:T' in signal_value:
+                print(f'{index}|cash:{cash}|shares:{shares}|portfolio:{portfolio_value}|signal_value:{signal_value}')
+                if shares != 0:
+                    cash = cash + ( shares * row['High'] )
+                    shares = 0
+                    
+            
+            elif signal_value == 'SELL':
+                if shares != 0:
+                    cash += shares * row['High']
+                    shares = 0
+                    
+
+            portfolio_value = (shares * row['High']) + cash
+
         shares_lst.append(shares)
         cash_lst.append(cash)
-        portfolio_lst.append(portfolio)
+        portfolio_lst.append(portfolio_value)
         
     data12['shares'] = np.array(shares_lst)
     data12['cash'] = np.array(cash_lst)
-    data12['portfolio'] = np.array(portfolio_lst)
+    data12['portfolio_value'] = np.array(portfolio_lst)
     
     # Return df
     return data12
